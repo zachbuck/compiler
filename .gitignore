@@ -1,0 +1,7 @@
+
+# Personal Settings
+.vscode
+
+# Build Targets
+/target
+*/target

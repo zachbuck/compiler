@@ -1,0 +1,11 @@
+
+[workspace]
+resolver = "3"
+members = ["tokenizer"]
+
+[workspace.package]
+authors = ["Jannis Buecking"]
+
+[workspace.dependencies]
+trie-rs = { version = "0.4" }
+regex 	= { version = "1"   }

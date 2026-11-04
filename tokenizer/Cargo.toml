@@ -1,0 +1,9 @@
+[package]
+name = "tokenizer"
+authors.workspace = true
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+trie-rs = { workspace = true }
+regex	= { workspace = true }
