@@ -93,7 +93,6 @@ pub fn generate_string_enum(tokens: TokenStream) -> Result<TokenStream, (StringE
 	let enum_variants = enum_map.iter()
 		.map(|(key, _)| key)
 		.enumerate()
-		.map(|(i, key)| (i as isize, key))
 		.map(|(i, key)| quote! { #key = #i });
 
 	let all = enum_map.iter()
@@ -106,6 +105,7 @@ pub fn generate_string_enum(tokens: TokenStream) -> Result<TokenStream, (StringE
 	// Begin generating the new tokens
 	let token_stream = quote! {
 		#[derive(Clone, Copy)]
+		#[repr(usize)]
 		pub enum #enum_name {
 			#(#enum_variants),*
 		}
@@ -117,7 +117,7 @@ pub fn generate_string_enum(tokens: TokenStream) -> Result<TokenStream, (StringE
 
 		impl std::fmt::Display for #enum_name {
 			fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-				f.write_str(Self::LABELS[(*self as isize) as usize])
+				f.write_str(Self::LABELS[*self as usize])
 			}
 		}
 	};
