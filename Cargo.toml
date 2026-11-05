@@ -1,7 +1,7 @@
 
 [workspace]
 resolver = "3"
-members = ["macros","tokenizer"]
+members = ["macros", "macros-helper","tokenizer"]
 
 [workspace.package]
 authors = ["Jannis Buecking"]
@@ -11,8 +11,9 @@ authors = ["Jannis Buecking"]
 proc-macro2 	= { version = "1"   }
 quote			= { version = "1"   }
 regex 			= { version = "1"   }
-syn				= { version = "3"   }
+syn				= { version = "3",    features = [ "full" ] }
 trie-rs 		= { version = "0.4" }
 
 # Local libraries (i.e., other packages in this workspace)
 macros			= { path = "./macros" }
+macros-helper	= { path = "./macros-helper" }

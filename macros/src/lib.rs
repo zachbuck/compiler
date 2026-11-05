@@ -1,13 +1,13 @@
 
 use proc_macro::TokenStream;
-use syn::Error;
+use syn::{ItemEnum, parse_macro_input};
 
 mod string_enum;
 
 #[proc_macro]
 pub fn generate_string_enum(tokens: TokenStream) -> TokenStream {
-	match string_enum::generate_string_enum(tokens) {
-		Ok(tokens) 	=> tokens,
-		Err((err, span)) 	=> Error::new(span.into(), format!("{:?}", err)).to_compile_error().into(),
+	// Parse syntax tree and pass it down
+	match string_enum::generate_string_enum(parse_macro_input!(tokens as ItemEnum)) {
+		Ok(tokens) => tokens.into()
 	}
 }
