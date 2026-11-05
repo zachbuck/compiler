@@ -5,3 +5,5 @@
 # Build Targets
 /target
 */target
+Cargo.lock
+*/Cargo.lock

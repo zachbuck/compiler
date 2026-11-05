@@ -5,5 +5,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+# External libraries
 trie-rs = { workspace = true }
 regex	= { workspace = true }
+
+# Local libraries (i.e., other packages in this workspace)
+macros 	= { workspace = true }
