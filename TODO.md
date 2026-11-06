@@ -10,6 +10,7 @@
 
 - [ ] add support for macros in the macro so it generally plays nicer
 - [ ] implement faster compile-time data structure for `TryFrom<&str>` (e.g., a compile-time trie?)
+- [ ] figure out unit tests of some kind
 
 ## tokenizer
 
