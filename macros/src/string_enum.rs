@@ -1,7 +1,98 @@
 
-pub trait StringEnum {
-	fn from_label(label: &str) -> Self;
-	fn to_label(&self) -> &'static str;
+use proc_macro2::{Span, TokenStream};
+use quote::{quote, quote_spanned};
+use syn::{Expr, ItemEnum, Lit, spanned::Spanned};
+
+pub enum GenerateStringEnumError {
+	MissingDiscriminant { ident_span: Span },
+	MissingString { ident_span: Span, expr_span: Span },
 }
 
-pub use macros_internal::generate_string_enum;
+pub fn generate_string_enum(syntax_tree: ItemEnum) -> Result<TokenStream, GenerateStringEnumError> {
+	use GenerateStringEnumError::*;
+
+	// get the name of the enum.
+	let enum_name = syntax_tree.ident;
+
+	// parse the pairs of identifiers and strings.
+	let mut enum_pairs = Vec::with_capacity(syntax_tree.variants.len());
+	for variant in &syntax_tree.variants {
+		// Get the identifier of the enum pair.
+		let ident = &variant.ident;
+
+		// Get if there is a value assigned.
+		let (_, expr) = &variant.discriminant.as_ref().ok_or(MissingDiscriminant{ ident_span: variant.span(), })?;
+		
+		// Make sure that it is a string literal.
+		let literal = match expr {
+			Expr::Lit(literal) => {
+				match &literal.lit {
+					Lit::Str(str) => Ok(str.value()),
+					_ => Err(MissingString { ident_span: ident.span(), expr_span: expr.span() }),
+				}
+			},
+			_ => Err(MissingString { ident_span: ident.span(), expr_span: expr.span() }),
+		}?;
+
+		enum_pairs.push((ident, literal));
+	}
+
+	// create the constant that will store all of the lables.
+	let enum_count = enum_pairs.len();
+	let literals = enum_pairs.iter()
+		.map(|(_, literal)| literal);
+	let label_list = quote! {
+		const LABELS: [&'static str; #enum_count] = [ #( #literals ),* ]
+	};
+
+	let variants = enum_pairs.iter()
+		.map(|(ident, _)| ident)
+		.enumerate()
+		.map(|(i, ident)| quote_spanned! {ident.span()=> #ident = #i });
+
+	let enum_definition = quote! {
+		#[repr(usize)]
+		#[derive(Clone, Copy)]
+		enum #enum_name {
+			#( #variants ),*
+		}
+	};
+
+	let display_definition = quote! {
+		#[automatically_derived]
+		#[doc(hidden)]
+		impl std::fmt::Display for #enum_name {
+			fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+				#label_list;
+				formatter.write_str(LABELS[*self as usize])
+			}
+		}
+	};
+
+	let match_arms = enum_pairs.iter()
+		.map(|(_, label)| label)
+		.enumerate()
+		.map(|(i, label)| quote! { #label => Ok(unsafe { std::mem::transmute(#i) }) });
+
+	let try_from_str_definition = quote! {
+		#[automatically_derived]
+		impl TryFrom<&str> for #enum_name {
+			type Error = ();
+
+			fn try_from(label: &str) -> Result<Self, Self::Error> {
+				match label {
+					#( #match_arms, )*
+					_ => Err(()),
+				}
+			}
+		}
+	};
+
+	let out = quote_spanned! {Span::call_site()=>
+		#enum_definition
+		#display_definition
+		#try_from_str_definition
+	};
+
+	return Ok(out);
+}
