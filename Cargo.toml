@@ -2,7 +2,9 @@
 [workspace]
 resolver = "3"
 members = [
+	"cli",
 	"macros", 
+	"macros-internal",
 	"tokenizer",
 ]
 
@@ -13,9 +15,8 @@ authors = ["Jannis Buecking"]
 # External libraries
 proc-macro2 	= { version = "1"   }
 quote			= { version = "1"   }
-regex 			= { version = "1"   }
-syn				= { version = "3",    features = [ "full" ] }
-trie-rs 		= { version = "0.4" }
+syn				= { version = "3",    features = [ "full", "extra-traits" ] }
 
 # Local libraries (i.e., other packages in this workspace)
 macros			= { path = "./macros" }
+macros-internal	= { path = "./macros-internal" }
