@@ -9,7 +9,7 @@
 /// ## Example
 /// 
 /// ```
-/// # use macros::generate_string_enum;
+/// # use macros::string_enum::generate_string_enum;
 /// generate_string_enum! {
 /// 	#[derive(PartialEq)]
 /// 	enum Fruit {
