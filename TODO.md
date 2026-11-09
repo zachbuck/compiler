@@ -15,4 +15,4 @@
 
 ## tokenizer
 
-- [ ] asdf
+- [ ] Make LiteralType more data driven, have it automatically derive TryFrom backing type.

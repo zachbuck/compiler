@@ -16,6 +16,9 @@ pub fn generate_string_enum(syntax_tree: ItemEnum) -> Result<TokenStream, Genera
 	// Get the name of the enum.
 	let enum_name = syntax_tree.ident;
 	
+	// Get the visibility of the enum.
+	let visibility = syntax_tree.vis;
+
 	// Get attributes.
 	let attributes = syntax_tree.attrs;
 
@@ -75,7 +78,7 @@ pub fn generate_string_enum(syntax_tree: ItemEnum) -> Result<TokenStream, Genera
 		#( #attributes )*
 		#[repr(usize)]
 		#[derive(Clone, Copy)]
-		enum #enum_name {
+		#visibility enum #enum_name {
 			#( #variants ),*
 		}
 	};
