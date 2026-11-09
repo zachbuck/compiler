@@ -1,173 +1,137 @@
 
-//! This contains definitions for the pattern matching for this library.
-
 use std::sync::LazyLock;
 
-use regex::Regex;
-use trie_rs::map::{Trie, TrieBuilder};
+use regex::{Regex, RegexBuilder};
+use trie_rs::Trie;
 
-use crate::token::Token;
+pub static IGNORE: LazyLock<Box<[Regex]>> = LazyLock::new(|| {
+	const PATTERN_COUNT: usize = 3;
 
-/// Enum specifying what systems used to match against categories
-/// Different implementations for different matching systems
+	const PATTERNS: [&str; PATTERN_COUNT] = [
+		// General whitespace
+		r"\s+",
 
-pub enum Match {
-	Trie {
-		internal: Trie<u8, Token>,
-	},
-	Regex {
-		regexes: Box<[Regex]>, 
-		transform: fn(&str) -> Token
+		// Comments
+		r"//.*?(\n|$)",
+		r"/\*.*?\*/",
+	];
+
+	let regexes = PATTERNS
+		.map(|pattern| format!("^{pattern}"))
+		.map(|regex| 
+			RegexBuilder::new(&regex)
+				.dot_matches_new_line(true)
+				.build()
+				.unwrap()
+		);
+
+	Box::new(regexes)
+});
+
+pub static PUNCTUATION: LazyLock<Regex> = LazyLock::new(|| {
+	const CLASS_COUNT: usize = 9;
+
+	// These will all be combined into a character class. They will be combined into
+	// multi character symbols or interpreted into their syntactic purpose later.
+	// Some will be defined more than once, this should be optimized out by the regex engine.
+	// This is to make sure that all symbols are where they should be in case the grammer changes
+	// at some later point
+	const CLASSES: [&str; CLASS_COUNT] = [
+		r"()\[\]{}<>", 	// Grouping symbols
+		r".,:;", 		// Seperator symbols
+		r"-><>=",		// Definition symbols
+		r"~&|^<>",		// Bitwise operators
+		r"+\-*/",		// Arithmetic operators
+		r"!&|^",		// Boolean operators
+		r"=!<>",		// Comparison operators
+		r"*&",			// Pointer operators
+		r"=",			// Assignment
+	];
+
+	let pattern = format!(
+		"^[{}]",
+		CLASSES
+			.map(|class| format!("[{class}]"))
+			.join("")
+	);
+
+	RegexBuilder::new(&pattern)
+		.build()
+		.unwrap()
+});
+
+pub static KEYWORD: LazyLock<Trie<u8>> = LazyLock::new(|| {
+	static CLASS_COUNT: usize = 2;
+
+	static KEYWORDS: [&[&str]; CLASS_COUNT] = [
+		&["fn", "return"], // function-related keywords
+		&["int"], // primitive types
+	];
+
+	let keywords = KEYWORDS.into_iter().flatten();
+
+	Trie::from_iter(keywords)
+});
+
+pub static LITERAL: LazyLock<Box<[Regex]>> = LazyLock::new(|| {
+	static CLASS_COUNT: usize = 1;
+
+	static CLASSES: [&[&str]; CLASS_COUNT] = [
+		&[r"\d+"], // Integer
+	];
+
+	let regexes = CLASSES
+		.map(|class| class.join("|"))
+		.map(|class| format!("^{class}"))
+		.map(|pattern| 
+			RegexBuilder::new(&pattern)
+				.build()
+				.unwrap()
+		);
+
+	Box::new(regexes)
+});
+
+pub static IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
+	static PATTERN: &str = r"[\w][\w\d]*";
+
+	RegexBuilder::new(PATTERN)
+		.build()
+		.unwrap()
+});
+
+#[cfg(test)]
+mod test {
+	use crate::pattern_matching::*;
+
+	// To avoid problems, none of the patterns should ever match against 
+	// empty strings.
+	#[test]
+	fn match_empty_string() {
+		assert!(IGNORE.iter().any(|regex| regex.is_match("")) == false);
+		assert!(PUNCTUATION.is_match("") == false);
+		assert!(KEYWORD.longest_prefix::<String, _>("").is_none());
+		assert!(LITERAL.iter().any(|regex| regex.is_match("")) == false);
+		assert!(IDENTIFIER.is_match("") == false);
+	}
+
+	// The token matchers should only match at the beginning. Test that
+	// this behavior is enforced.
+	#[test]
+	fn match_at_beginning() {
+		assert!(IGNORE.iter().any(|regex| regex.is_match("asdf    // /* */")) == false);
+		assert!(PUNCTUATION.is_match("match? .,:?<>=&!") == false)
+	}
+
+	#[test]
+	fn match_empty_space() {
+		assert!(IGNORE.iter().find_map(|regex| regex.find(" \t\r\n asdf")).unwrap().as_str() == " \t\r\n ");
+	}
+
+	#[test]
+	fn match_comments() {
+		assert!(IGNORE.iter().find_map(|regex| regex.find("//test \n asdf")).unwrap().as_str() == "//test \n");
+		assert!(IGNORE.iter().find_map(|regex| regex.find("//test")).unwrap().as_str() == "//test");
+		assert!(IGNORE.iter().find_map(|regex| regex.find("/* test */ asdfasdf")).unwrap().as_str() == "/* test */");
 	}
 }
-
-impl Match {
-	pub fn try_match(&self, input: &str) -> Option<Token> {
-		match self {
-			Match::Trie { internal } => {
-				internal.common_prefix_search::<String, _>(input).last().map(|(_, token)| token.clone())
-			},
-			Match::Regex { regexes, transform } => {
-				regexes.iter()
-					.map(|regex| regex.captures(input))
-					.filter_map(|s| s.map(|c| c.get_match().as_str()))
-					.max_by_key(|s| s.len())
-					.map(transform)
-			}
-		}
-	}
-
-	fn from_iter_trie<T, O>(iter: T) -> Self 
-	where 	T: IntoIterator<Item = (&'static str, O)>,
-			O: Into<Token>,
-	{
-		let mut builder = TrieBuilder::new();
-		iter.into_iter().for_each(|(key, value)| builder.push(key, value.into()));
-		let trie = builder.build();
-
-		Match::Trie {
-			internal: trie,
-		}
-	}
-
-	fn from_iter_regex<T>(iter: T, transform: fn(&str) -> Token) -> Self 
-	where T: IntoIterator<Item = &'static str>
-	{
-		let regexes = iter.into_iter()
-			.map(|pattern| format!("^{pattern}"))
-			.map(|pattern| Regex::new(&pattern).expect(&format!("Improper Regex '{pattern}'")))
-			.collect::<Box<[_]>>();
-
-		Match::Regex { 
-			regexes, 
-			transform,
-		}
-	}
-}
-
-/// Regexes to check, if found ignore them immediately.
-pub static IGNORE: LazyLock<Match> = LazyLock::new( || {
-	fn transform(input: &str) -> Token {
-		Token::Literal(input.to_string())
-	}
-
-	Match::from_iter_regex(
-		[
-			// Ignore leading whitespace
-			"\\s+",
-			// Ignore comments
-			"\\/\\/.*?(?:\r\n|\n)", "/\\*.*?\\*/",
-		],
-		transform,
-	)
-});
-
-/// Special punctuation characters that have special meaning.
-/// Does not support regex for added speed.
-pub static PUNCTUATION: LazyLock<Match> = LazyLock::new( || {
-	use crate::token::Punctuation::*;
-
-	Match::from_iter_trie(
-		[
-			// seperator characters
-			(".", Period), (",", Comma), (";", Semicolon), (":", Colon),
-			// Assignment
-			("=", Equal),
-			// grouping characters
-			("(", OpenParenthesis), (")", CloseParenthesis), 
-			("[", OpenBracket), ("]", CloseBracket), 
-			("{", OpenBrace), ("}", CloseBrace),
-			// specific to function/struct definitions
-			("->", Arrow), ("<", LessThan), (">", GreaterThan),
-			// arithmetic operators
-			("-", Minus), ("+", Plus), ("*", Asterisk), ("/", Slash), 
-			("**", DoubleAsterisk),
-			// bitwise operators
-			("~", Tilde), ("&", And), ("|", Pipe), ("^", Caret), 
-			("<<", DoubleLessThan), (">>", DoubleGreaterThan),
-			// logical operators
-			("!", Exclamation), ("&&", DoubleAnd), ("||", DoublePipe), 
-			("^^", DoubleCaret),
-			// pointer operators
-			("*", Asterisk), ("&", And),
-			// comparison operators (the double counting of '<' and '>' does not matter).
-			("==", DoubleEqual), ("!=", ExclaimEqual), (">", GreaterThan), 
-			(">=", GreaterEqual), ("<", LessThan), ("<=", LessEqual),
-		],
-	)
-});
-
-/// Keywords for the language.
-/// Does not support regex for added speed.
-pub static KEYWORDS: LazyLock<Match> = LazyLock::new( || {
-	use crate::token::Keyword::*;
-
-	Match::from_iter_trie(
-		[
-			// generic keywords
-			("fn", Fn),
-			("return", Return),
-			// in-built types
-			("int", Int),
-		],
-	)
-});
-
-/// Regexes identifying valid literals in the language.
-pub static LITERALS: LazyLock<Match> = LazyLock::new( || {
-	fn transform(input: &str) -> Token {
-		Token::Literal(input.to_string())
-	}
-
-	Match::from_iter_regex(
-		[
-			// Integer Literals
-			"[0-9]+",
-			// String literals
-			"\".*?[^\\\\]\"",
-		], 
-		transform
-	)
-});
-
-/// Regexes identifying valid identifiers in the language.
-pub static IDENTIFIER: LazyLock<Match> = LazyLock::new( || {
-	fn transform(input: &str) -> Token {
-		Token::Identifier(input.to_string())
-	}
-
-	Match::from_iter_regex(
-		[
-			"[a-zA-Z_][a-zA-Z0-9_]*",
-		], 
-		transform,
-	)
-});
-
-pub static ALL: &[&'static LazyLock<Match>] = &[
-	&IGNORE,
-	&PUNCTUATION,
-	&KEYWORDS,
-	&LITERALS,
-	&IDENTIFIER,
-];

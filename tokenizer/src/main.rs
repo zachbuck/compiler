@@ -1,12 +1,9 @@
 
-use macros::string_enum::generate_string_enum;
+use tokenizer::tokenizer::Tokenizer;
 
-generate_string_enum! {
-	enum Test {
-		Fn = "fn",
+fn main() {
+	let artifact = Tokenizer::tokenize_file("./test.jonk").unwrap();
+	for token in artifact.tokens {
+		println!("{:?}", token.token_type);
 	}
-}
-
-fn main() -> () {
-
 }
