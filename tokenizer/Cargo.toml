@@ -8,7 +8,6 @@ edition = "2024"
 [dependencies]
 # External libraries
 regex	= { workspace = true }
-trie-rs	= { workspace = true }
 
 # Local libraries (i.e., other packages in this workspace)
 macros 	= { workspace = true }

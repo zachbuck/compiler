@@ -15,4 +15,10 @@
 
 ## tokenizer
 
-- [ ] Make LiteralType more data driven, have it automatically derive TryFrom backing type.
+- [ ] Make `Tokenizer` handle errors more gracefully
+  - [ ] Backing buffer errors
+  - [ ] Unknown token
+  - [ ] Make the functions that automatically collect return these errors if they occur
+  - [ ] Maybe have to make a custom iterator function? idk?
+- [ ] Better keyword search (trie?)
+- [ ] Switch everything to just operate on `&[u8]` internally. (probably more performant)
