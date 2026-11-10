@@ -15,7 +15,7 @@ pub struct TokenizedFile {
 	/// The name of the source tokenized from (i.e., the filename)
 	pub path: 	PathBuf,
 	/// Tokens returned in order by the tokenizer.
-	pub tokens:			Vec<Token>,
+	pub tokens:	Vec<Token>,
 }
 
 /// The main type of interest for this module.
@@ -24,15 +24,15 @@ pub struct Token {
 	pub token_type: TokenType,
 	/// The location in the original source where the token originated from.
 	/// Useful for eventual debug information. 
-	pub span: Span,
+	pub span: 		Span,
 }
 
 /// A location in a source from which a token originates.
 pub struct Span {
 	/// The starting byte of the span
-	pub start: usize,
+	pub start: 	usize,
 	/// How many bytes long the span is
-	pub len: usize,
+	pub len: 	usize,
 }
 
 /// The types of tokens that can exist. The beginning of the tree describing
@@ -42,7 +42,7 @@ pub struct Span {
 pub enum TokenType {
 	/// Some individual punctuation character
 	Punct(Punct),
-	/// A language reserved keyword
+	/// A language reserved keyword (i.e., fn, return, etc.)
 	Keyword(Keyword),
 	/// A primative literal
 	Literal(Literal),
