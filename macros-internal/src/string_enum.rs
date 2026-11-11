@@ -58,22 +58,23 @@ pub fn generate_string_enum(syntax_tree: ItemEnum) -> Result<TokenStream, Genera
 			_ => Err(MissingString { ident_span: ident.span(), expr_span: expr.span() }),
 		}?;
 
-		enum_pairs.push((ident, literal));
+		let attributes = &variant.attrs[..];
+
+		enum_pairs.push((ident, literal, attributes));
 	}
 
 	// Create the constant that will store all of the lables.
 	let enum_count = enum_pairs.len();
 	let literals = enum_pairs.iter()
-		.map(|(_, literal)| literal);
+		.map(|(_, literal, _)| literal);
 	let label_list = quote! {
 		const LABELS: [&'static str; #enum_count] = [ #( #literals ),* ]
 	};
 
 	// Redefine the enum in terms of usize.
 	let variants = enum_pairs.iter()
-		.map(|(ident, _)| ident)
 		.enumerate()
-		.map(|(i, ident)| quote_spanned! {ident.span()=> #ident = #i });
+		.map(|(i, (ident, _, attributes))| quote_spanned! {ident.span()=> #( #attributes )* #ident = #i });
 	let enum_definition = quote! {
 		#( #attributes )*
 		#[repr(usize)]
@@ -97,9 +98,8 @@ pub fn generate_string_enum(syntax_tree: ItemEnum) -> Result<TokenStream, Genera
 
 	// Define TryFrom<&str> for the enum
 	let match_arms = enum_pairs.iter()
-		.map(|(_, label)| label)
 		.enumerate()
-		.map(|(i, label)| quote! { #label => Ok(unsafe { std::mem::transmute(#i) }) });
+		.map(|(i, (_, label, _))| quote! { #label => Ok(unsafe { std::mem::transmute(#i) }) });
 	let try_from_str_definition = quote! {
 		#[automatically_derived]
 		impl TryFrom<&str> for #enum_name {
