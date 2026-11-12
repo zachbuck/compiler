@@ -13,10 +13,10 @@ authors = ["Jannis Buecking"]
 
 [workspace.dependencies]
 # External libraries
-proc-macro2 	= { version = "1"   }
-quote			= { version = "1"   }
-regex			= { version = "1"   }
-syn				= { version = "3",  features = [ "full" ] }
+proc-macro2 	= { version = "1" }
+quote			= { version = "1" }
+regex			= { version = "1" }
+syn				= { version = "3" }
 
 # Local libraries (i.e., other packages in this workspace)
 macros			= { path = "./macros" }

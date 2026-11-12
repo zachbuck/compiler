@@ -6,7 +6,7 @@
 
 use std::path::PathBuf;
 
-use macros::string_enum::generate_string_enum;
+use macros::string_enum::StringEnum;
 
 /// This is the output of functions from tokenizer which collect.
 /// Contains a collection of all of the tokens and the source on
@@ -61,45 +61,68 @@ pub struct Punct {
 	pub continues: 	bool,
 }
 
-generate_string_enum! {
-	/// A punctuation type
-	#[allow(missing_docs)]
-	#[derive(Debug)]
-	pub enum PunctType {
-		OpenParen 		= "(",
-		CloseParen 		= ")",
-		OpenBracket 	= "[",
-		CloseBracket 	= "]",
-		OpenBrace 		= "{",
-		CloseBrace 		= "}",
-		Period 			= ".",
-		Comma 			= ",",
-		Colon 			= ":",
-		Semicolon 		= ";",
-		Equal 			= "=",
-		Tilde 			= "~",
-		And 			= "&",
-		Pipe 			= "|",
-		Caret 			= "^",
-		LessThan 		= "<",
-		GreaterThan 	= ">",
-		Exclaimation 	= "!",
-		Plus 			= "+",
-		Minus 			= "-",
-		Asterisk 		= "*",
-		Slash 			= "/",
-	}
+#[allow(missing_docs)]
+#[derive(Clone, Copy)]
+#[derive(Debug)]
+#[derive(StringEnum)]
+pub enum PunctType {
+	#[str_mapping = "("]
+	OpenParen,
+	#[str_mapping = ")"]
+	CloseParen,
+	#[str_mapping = "["]
+	OpenBracket,
+	#[str_mapping = "]"]
+	CloseBracket,
+	#[str_mapping = "{"]
+	OpenBrace,
+	#[str_mapping = "}"]
+	CloseBrace,
+	#[str_mapping = "."]
+	Period,
+	#[str_mapping = ","]
+	Comma,
+	#[str_mapping = ":"]
+	Colon,
+	#[str_mapping = ";"]
+	Semicolon,
+	#[str_mapping = "="]
+	Equal,
+	#[str_mapping = "~"]
+	Tilde,
+	#[str_mapping = "&"]
+	And,
+	#[str_mapping = "|"]
+	Pipe,
+	#[str_mapping = "^"]
+	Caret,
+	#[str_mapping = "<"]
+	LessThan,
+	#[str_mapping = ">"]
+	GreaterThan,
+	#[str_mapping = "!"]
+	Exclaimation,
+	#[str_mapping = "+"]
+	Plus,
+	#[str_mapping = "-"]
+	Minus,
+	#[str_mapping = "*"]
+	Asterisk,
+	#[str_mapping = "/"]
+	Slash,
 }
 
-generate_string_enum! {
-	/// A language reserved keyword
-	#[allow(missing_docs)]
-	#[derive(Debug)]
-	pub enum Keyword {
-		Fn 		= "fn",
-		Return 	= "return",
-		Int		= "int",
-	}
+#[allow(missing_docs)]
+#[derive(Clone, Copy)]
+#[derive(Debug)]
+#[derive(StringEnum)]
+pub enum Keyword {
+	#[str_mapping = "fn"]
+	Fn,
+	#[str_mapping = "return"]
+	Return,
+	#[str_mapping = "int"]
+	Int,
 }
 
 /// An enum describing a primative literal.
