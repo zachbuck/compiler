@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::{
-	output::{Keyword, Literal, LiteralType, Punct, PunctType, Span, Token, TokenType, TokenizedFile}, 
+	output::{File as TokenizedFile, Ident, Keyword, KeywordType, Literal, LiteralData, LiteralType, Punct, PunctType, Span, Token}, 
 	pattern_matching::{IDENTIFIER, IGNORE, KEYWORD, LITERAL, PUNCTUATION},
 };
 
@@ -44,17 +44,17 @@ impl Tokenizer<BufReader<File>> {
 	/// Returns a `TokenizerArtifact` containing all of the tokens.
 	/// Returns `Err` if an error occurs.
 	pub fn tokenize_file(source_path: &str) -> Result<TokenizedFile, TokenizerError> {
-		let path = Self::check_path(source_path)?;
+		let filename = Self::check_path(source_path)?;
 
 		// Open the file, build the buffer.
-		let file = File::open(&path).map_err(|_| TokenizerError::FileError(path.clone()))?;
+		let file = File::open(&filename).map_err(|_| TokenizerError::FileError(filename.clone()))?;
 		let reader = BufReader::new(file);
 
 		// run internal tokenizer on abstract BufRead object.
 		let tokens = Self::tokenize(reader);
 
 		Ok(TokenizedFile {
-			path,
+			filename,
 			tokens
 		})
 	}
@@ -107,8 +107,8 @@ where T: BufRead {
 
 	fn claim_span(&mut self, bytes: usize) -> Span {
 		let span = Span {
-			start: self.bytes_read,
-			len: bytes,
+			beg_byte: self.bytes_read,
+			len_byte: bytes,
 		};
 
 		self.consume_bytes(bytes);
@@ -166,13 +166,11 @@ where T: BufRead {
 		let continues = Self::starts_with_punct(&buffer[byte_count..]) != 0;
 		let span = self.claim_span(byte_count);
 
-		Ok(Token {
-			token_type: TokenType::Punct(Punct { 
-				punct_type, 
-				continues,
-			}),
-			span,
-		})
+		Ok(Token::Punct(Punct {
+			punct_type: punct_type,
+			continues:	continues,
+			span:		span,
+		}))
 	}
 
 	// Detects if the buffer starts with a match to the `KEYWORD`
@@ -198,13 +196,13 @@ where T: BufRead {
 		if 		Self::starts_with_ignore(&buffer[byte_count..]) == 0 
 			&&	Self::starts_with_punct(&buffer[byte_count..]) == 0 { return Err(TokenClaimError::NoTokenFound) }
 
-		let keyword = Keyword::try_from(str::from_utf8(&buffer[..byte_count]).unwrap()).unwrap(); 
+		let keyword_type = KeywordType::try_from(str::from_utf8(&buffer[..byte_count]).unwrap()).unwrap(); 
 		let span = self.claim_span(byte_count);
 
-		Ok(Token {
-			token_type: TokenType::Keyword(keyword),
-			span: span,
-		})
+		Ok(Token::Keyword(Keyword {
+			keyword_type,
+			span,
+		}))
 	}
 
 	// Detects if the buffer starts with a match to the `LITERAL`
@@ -232,13 +230,13 @@ where T: BufRead {
 		if 		Self::starts_with_ignore(&buffer[byte_count..]) == 0 
 			&& 	Self::starts_with_punct(&buffer[byte_count..]) == 0 { return Err(TokenClaimError::NoTokenFound) }
 
-		let literal = Literal::try_from((lit_type, str::from_utf8(&buffer[..byte_count]).unwrap())).unwrap();
+		let data = LiteralData::try_from((lit_type, str::from_utf8(&buffer[..byte_count]).unwrap())).unwrap();
 		let span = self.claim_span(byte_count);
 
-		Ok(Token {
-			token_type: TokenType::Literal(literal),
+		Ok(Token::Literal(Literal {
+			data,
 			span,
-		})
+		}))
 	}
 
 	// Detects if the buffer starts with a match to the `IDENFIFIER`
@@ -263,10 +261,10 @@ where T: BufRead {
 		let ident = str::from_utf8(&buffer[..byte_count]).unwrap().to_string();
 		let span = self.claim_span(byte_count);
 
-		Ok(Token {
-			token_type: TokenType::Ident(ident),
+		Ok(Token::Ident(Ident {
+			ident,
 			span,
-		})
+		}))
 	}
 }
 
